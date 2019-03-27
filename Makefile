@@ -14,8 +14,4 @@ venv: requirements.txt
 requirements.txt: FORCE
 	'$(PYTHON_BIN)' -m piptools compile requirements.in
 
-upload:
-	rsync -rtv ./ root@test-passwar-0.wadrid.net:/root/passwar/
-	rsync -rtv ./ root@test-passwar-1.wadrid.net:/root/passwar/
-
 FORCE:
