@@ -3,8 +3,9 @@ import subprocess
 from dataclasses import dataclass, replace
 from pathlib import Path
 from posixpath import join
+from shlex import quote
 from subprocess import CompletedProcess, Popen
-from typing import Text
+from typing import Text, Tuple
 
 from luh3417.utils import LuhError
 
@@ -68,6 +69,46 @@ class Location:
 
         raise NotImplementedError
 
+    def run_script(self, script: Text) -> Tuple[Text, Text, int]:
+        """
+        Runs the provided script with bash, on the machine targeted by this
+        location.
+        """
+
+        raise NotImplementedError
+
+    def chown(self, owner: Text) -> None:
+        """
+        Chown recursively this location
+        """
+
+        raise NotImplementedError
+
+    def set_git_repo(self, repo: Text, version: Text):
+        """
+        Sets the current location to be a git repo at the given version. Any
+        pre-existing file or directory at this location will be overridden.
+        """
+
+        location = self.path
+
+        if location and location[-1] == "/":
+            location = location[0:-1]
+
+        out, err, ret = self.run_script(
+            """
+                git clone -b {version} {repo} {location}__ \\
+                && mv {location} {location}___ \\
+                && mv {location}__ {location} \\
+                && rm -fr {location}___
+            """.format(
+                repo=quote(repo), version=quote(version), location=quote(location)
+            )
+        )
+
+        if ret:
+            raise LuhError(f"Could not clone repo: {err}")
+
     def child(self, file_name) -> "Location":
         """
         Generates the location object for a child file named file_name
@@ -120,7 +161,7 @@ class SshLocation(Location):
 
         kwargs = dict(kwargs, encoding="utf-8")
 
-        new_args = ["ssh", self.ssh_target]
+        new_args = ["ssh", "-A", self.ssh_target]
         new_args.extend(args)
 
         cp = subprocess.run(new_args, *p_args, **kwargs)
@@ -138,7 +179,7 @@ class SshLocation(Location):
         that the SSH command will be prepended to the args.
         """
 
-        new_args = ["ssh", self.ssh_target]
+        new_args = ["ssh", "-A", self.ssh_target]
         new_args.extend(args)
 
         cp = subprocess.Popen(new_args, *p_args, **kwargs)
@@ -236,6 +277,39 @@ class SshLocation(Location):
         if tar.returncode:
             raise LuhError(f"Error while extracting the archive: {tar_err}")
 
+    def chown(self, owner: Text) -> None:
+        """
+        Simply use chown
+        """
+
+        cp = self.ssh_run(
+            ["chown", "-R", owner, self.path],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+        if cp.returncode:
+            raise LuhError(f"Failed to chown: {cp.stderr}")
+
+    def run_script(self, script: Text) -> Tuple[Text, Text, int]:
+        """
+        Runs the script through SSH piping
+        """
+
+        cp = self.ssh_popen(
+            ["bash"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding="utf-8",
+        )
+
+        cp.stdin.write(script)
+
+        out, err = cp.communicate()
+
+        return out, err, cp.returncode
+
 
 @dataclass
 class LocalLocation(Location):
@@ -294,3 +368,36 @@ class LocalLocation(Location):
 
         if tar.returncode:
             raise LuhError(f"Error while extracting the archive: {tar.stderr}")
+
+    def chown(self, owner: Text) -> None:
+        """
+        A simple local chown
+        """
+
+        cp = subprocess.run(
+            ["chown", "-R", owner, self.path],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+        if cp.returncode:
+            raise LuhError(f"Failed to chown: {cp.stderr}")
+
+    def run_script(self, script: Text) -> Tuple[Text, Text, int]:
+        """
+        Just pipe the script to bash
+        """
+
+        cp = subprocess.Popen(
+            ["bash"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding="utf-8",
+        )
+
+        cp.stdin.write(script)
+
+        out, err = cp.communicate()
+
+        return out, err, cp.returncode

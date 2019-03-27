@@ -6,6 +6,7 @@ from luh3417.luhfs import Location, parse_location
 from luh3417.restore import (
     get_remote,
     get_wp_config,
+    patch_config,
     read_config,
     restore_db,
     restore_files,
@@ -21,6 +22,8 @@ def parse_args() -> Namespace:
     """
 
     parser = ArgumentParser(description="Restores a snapshot")
+
+    parser.add_argument("-p", "--patch", help="A settings patch file")
 
     parser.add_argument(
         "snapshot",
@@ -48,11 +51,24 @@ def main():
             snap.extract_archive_to_dir(d)
 
         with doing("Reading configuration"):
-            config = read_config(join(d, "settings.json"))
+            config = patch_config(read_config(join(d, "settings.json")), args.patch)
 
         with doing("Restoring files"):
             remote = get_remote(config)
             restore_files(join(d, "wordpress"), remote)
+
+        if config["git"]:
+            with doing("Cloning Git repos"):
+                for repo in config["git"]:
+                    location = remote.child(repo["location"])
+                    location.set_git_repo(repo["repo"], repo["version"])
+                    doing.logger.info(
+                        "Cloned %s@%s to %s", repo["repo"], repo["version"], location
+                    )
+
+        if config["owner"]:
+            with doing("Changing files owner"):
+                remote.chown(config["owner"])
 
         with doing("Restoring DB"):
             wp_config = get_wp_config(config)

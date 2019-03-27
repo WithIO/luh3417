@@ -1,5 +1,6 @@
 import json
-from typing import Text, Dict
+from json import JSONDecodeError
+from typing import Text, Dict, Optional
 
 from luh3417.luhfs import Location, parse_location
 from luh3417.luhsql import create_from_source
@@ -65,3 +66,45 @@ def restore_db(wp_config, remote: Location, dump_path: Text):
             db.restore_dump(f)
     except OSError as e:
         raise LuhError(f"Could not read SQL dump: {e}")
+
+
+def patch_config(config: Dict, patch_location: Optional[Text]) -> Dict:
+    """
+    Applies a configuration patch from the source patch file, which will
+    alter the restoration process.
+
+    Available options:
+
+    - `owner` - Same syntax as chown owner, changes the ownership of restored
+      files
+    - `git` - A list of repositories to clone (cf below).
+
+    Example for the `git` value:
+
+        "git": [
+            {
+                "location": "wp-content/themes/jupiter-child",
+                "repo": "git@gitlab.com:your_company/jupiter_child.git",
+                "version": "master"
+            }
+        ]
+    """
+
+    base_config = {"owner": None, "git": []}
+
+    for k, v in config.items():
+        base_config[k] = v
+
+    if patch_location:
+        try:
+            with open(patch_location, "r", encoding="utf-8") as f:
+                patch = json.load(f)
+        except OSError as e:
+            raise LuhError(f"Could not open patch file: {e}")
+        except JSONDecodeError as e:
+            raise LuhError(f"Could not decode patch file: {e}")
+        else:
+            for k, v in patch.items():
+                base_config[k] = v
+
+    return base_config
