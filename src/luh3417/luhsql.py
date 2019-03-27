@@ -47,7 +47,7 @@ class LuhSql:
         """
 
         if self.ssh_proxy:
-            return ["ssh", self.ssh_proxy] + args
+            return ["ssh", "-C", self.ssh_proxy] + args
         else:
             return args
 

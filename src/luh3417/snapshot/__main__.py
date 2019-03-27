@@ -109,7 +109,10 @@ def main():
 
         with doing("Writing archive"):
             args.backup_dir.ensure_exists_as_dir()
-            make_dump_file_name(args, wp_config, now).archive_local_dir(d)
+            archive_location = make_dump_file_name(args, wp_config, now)
+
+            archive_location.archive_local_dir(d)
+            doing.logger.info("Wrote archive %s", archive_location)
 
 
 if __name__ == "__main__":
