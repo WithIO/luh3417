@@ -1,7 +1,7 @@
 import subprocess
 from dataclasses import dataclass
-from subprocess import PIPE
-from typing import List, Optional, Text
+from subprocess import DEVNULL, PIPE
+from typing import List, Optional, Text, TextIO
 
 from luh3417.luhfs import LocalLocation, Location, SshLocation
 from luh3417.utils import LuhError
@@ -79,7 +79,37 @@ class LuhSql:
             p.stderr.read(1)
             p.stdin.write(f"{self.password}\n")
 
-            p.communicate()
+            _, err = p.communicate()
 
             if p.returncode:
-                raise LuhError(f"Could not dump MySQL DB: {p.stderr}")
+                raise LuhError(f"Could not dump MySQL DB: {err}")
+
+    def restore_dump(self, fp: TextIO):
+        """
+        Restores a dump into the DB, reading the dump from an input TextIO
+        (which can be the stdout of another process or simply an open file, by
+        example).
+        """
+
+        p = subprocess.Popen(
+            self.args(
+                [
+                    "mysql",
+                    "-u",
+                    self.user,
+                    f"-p{self.password}",
+                    "-h",
+                    self.host,
+                    self.db_name,
+                ]
+            ),
+            stderr=PIPE,
+            stdout=DEVNULL,
+            stdin=fp,
+            encoding="utf-8",
+        )
+
+        _, err = p.communicate()
+
+        if p.returncode:
+            raise LuhError(f"Could not import MySQL DB: {err}")

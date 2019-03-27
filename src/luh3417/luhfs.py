@@ -60,6 +60,14 @@ class Location:
 
         raise NotImplementedError
 
+    def extract_archive_to_dir(self, target_dir: Text) -> None:
+        """
+        If the file at this location is an archive, then extract its content
+        into the specified target_dir. Otherwise raise an error.
+        """
+
+        raise NotImplementedError
+
     def child(self, file_name) -> "Location":
         """
         Generates the location object for a child file named file_name
@@ -193,14 +201,40 @@ class SshLocation(Location):
             stdin=tar.stdout,
         )
 
-        dd.communicate()
-        tar.communicate()
+        _, dd_err = dd.communicate()
+        _, tar_err = tar.communicate()
 
         if dd.returncode:
-            raise LuhError(f"Could not write remote archive: {dd.stderr}")
+            raise LuhError(f"Could not write remote archive: {dd_err}")
 
         if tar.returncode:
-            raise LuhError(f"Could not create the archive: {tar.stderr}")
+            raise LuhError(f"Could not create the archive: {tar_err}")
+
+    def extract_archive_to_dir(self, target_dir: Text) -> None:
+        """
+        Cat the remote file and pipe it into tar
+        """
+
+        parse_location(target_dir).ensure_exists_as_dir()
+
+        cat = self.ssh_popen(
+            ["cat", self.path], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        tar = subprocess.Popen(
+            ["tar", "-C", target_dir, "-x", "-z"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            stdin=cat.stdout,
+        )
+
+        _, tar_err = tar.communicate()
+        _, cat_err = cat.communicate()
+
+        if cat.returncode:
+            raise LuhError(f"Error while reading the remote archive: {cat_err}")
+
+        if tar.returncode:
+            raise LuhError(f"Error while extracting the archive: {tar_err}")
 
 
 @dataclass
@@ -244,3 +278,19 @@ class LocalLocation(Location):
 
         if cp.returncode:
             raise LuhError(f"Could not create archive {self.path}")
+
+    def extract_archive_to_dir(self, target_dir: Text) -> None:
+        """
+        Plain old local archive extraction
+        """
+
+        parse_location(target_dir).ensure_exists_as_dir()
+
+        tar = subprocess.run(
+            ["tar", "-C", target_dir, "-x", "-z", "-f", self.path],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+
+        if tar.returncode:
+            raise LuhError(f"Error while extracting the archive: {tar.stderr}")
