@@ -115,6 +115,8 @@ def main():
 
                 archive_location.archive_local_dir(d)
                 doing.logger.info("Wrote archive %s", archive_location)
+    except KeyboardInterrupt:
+        doing.logger.info('Quitting due to user signal')
     finally:
         SshManager.shutdown()
 

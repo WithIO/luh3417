@@ -69,7 +69,7 @@ class LuhSql:
                         "--hex-blob",
                         "-u",
                         self.user,
-                        "-p",
+                        f"-p{self.password}",
                         "-h",
                         self.host,
                         self.db_name,
@@ -77,12 +77,9 @@ class LuhSql:
                 ),
                 stderr=PIPE,
                 stdout=f,
-                stdin=PIPE,
+                stdin=DEVNULL,
                 encoding="utf-8",
             )
-
-            p.stderr.read(1)
-            p.stdin.write(f"{self.password}\n")
 
             _, err = p.communicate()
 

@@ -5,7 +5,7 @@ from typing import Dict, Optional, Text, Tuple, Union
 
 from luh3417.utils import make_doer
 
-doing = make_doer("luhssh")
+doing = make_doer("luh3417.luhssh")
 
 
 def make_ssh_args(
@@ -123,6 +123,8 @@ class SshManager:
             stderr=PIPE,
         )
 
+        doing.logger.debug(f'Process {self.process.pid} created')
+
     def cleanup(self):
         """
         Cleaning up this particular connection
@@ -180,7 +182,8 @@ class SshManager:
         Global shutdown of all manager instances
         """
 
-        doing.logger.debug("Shutting down SSH connections")
+        if cls._instances:
+            doing.logger.debug("Shutting down SSH connections")
 
-        for manager in cls._instances.values():
-            manager.cleanup()
+            for manager in cls._instances.values():
+                manager.cleanup()

@@ -85,6 +85,8 @@ def main():
             if config["setup_queries"]:
                 with doing("Running setup queries"):
                     run_queries(db, config["setup_queries"])
+    except KeyboardInterrupt:
+        doing.logger.info('Quitting due to user signal')
     finally:
         SshManager.shutdown()
 
