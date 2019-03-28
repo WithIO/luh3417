@@ -7,6 +7,7 @@ from typing import Dict, Text
 
 from luh3417.luhfs import Location, parse_location
 from luh3417.luhsql import create_from_source
+from luh3417.luhssh import SshManager
 from luh3417.snapshot import copy_files
 from luh3417.utils import make_doer, parse_wp_config, setup_logging
 
@@ -91,28 +92,31 @@ def main():
     args = parse_args()
     now = datetime.utcnow()
 
-    with doing("Parsing remote configuration"):
-        wp_config = parse_wp_config(args.source)
+    try:
+        with doing("Parsing remote configuration"):
+            wp_config = parse_wp_config(args.source)
 
-    with TemporaryDirectory() as d:
-        work_location = parse_location(d)
+        with TemporaryDirectory() as d:
+            work_location = parse_location(d)
 
-        with doing("Saving settings"):
-            dump_settings(args, wp_config, now, join(d, "settings.json"))
+            with doing("Saving settings"):
+                dump_settings(args, wp_config, now, join(d, "settings.json"))
 
-        with doing("Copying database"):
-            db = create_from_source(wp_config, args.source)
-            db.dump_to_file(join(d, "dump.sql"))
+            with doing("Copying database"):
+                db = create_from_source(wp_config, args.source)
+                db.dump_to_file(join(d, "dump.sql"))
 
-        with doing("Copying files"):
-            copy_files(args.source, work_location.child("wordpress"))
+            with doing("Copying files"):
+                copy_files(args.source, work_location.child("wordpress"))
 
-        with doing("Writing archive"):
-            args.backup_dir.ensure_exists_as_dir()
-            archive_location = make_dump_file_name(args, wp_config, now)
+            with doing("Writing archive"):
+                args.backup_dir.ensure_exists_as_dir()
+                archive_location = make_dump_file_name(args, wp_config, now)
 
-            archive_location.archive_local_dir(d)
-            doing.logger.info("Wrote archive %s", archive_location)
+                archive_location.archive_local_dir(d)
+                doing.logger.info("Wrote archive %s", archive_location)
+    finally:
+        SshManager.shutdown()
 
 
 if __name__ == "__main__":

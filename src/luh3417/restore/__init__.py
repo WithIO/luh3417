@@ -1,9 +1,9 @@
 import json
 from json import JSONDecodeError
-from typing import Text, Dict, Optional
+from typing import Text, Dict, Optional, List
 
 from luh3417.luhfs import Location, parse_location
-from luh3417.luhsql import create_from_source
+from luh3417.luhsql import LuhSql
 from luh3417.snapshot import copy_files
 from luh3417.utils import LuhError
 
@@ -53,19 +53,26 @@ def restore_files(wp_root: Text, remote: Location):
     copy_files(local, remote, delete=True)
 
 
-def restore_db(wp_config, remote: Location, dump_path: Text):
+def restore_db(db: LuhSql, dump_path: Text):
     """
     Restores the specified file into DB, using the wp config and remote
     location to connect the DB.
     """
 
     try:
-        db = create_from_source(wp_config, remote)
-
         with open(dump_path, "r", encoding="utf-8") as f:
             db.restore_dump(f)
     except OSError as e:
         raise LuhError(f"Could not read SQL dump: {e}")
+
+
+def run_queries(db: LuhSql, queries: List[Text]):
+    """
+    Runs all the queries from the config
+    """
+
+    for query in queries:
+        db.run_query(query)
 
 
 def patch_config(config: Dict, patch_location: Optional[Text]) -> Dict:
@@ -78,6 +85,8 @@ def patch_config(config: Dict, patch_location: Optional[Text]) -> Dict:
     - `owner` - Same syntax as chown owner, changes the ownership of restored
       files
     - `git` - A list of repositories to clone (cf below).
+    - `setup_queries` - A list of SQL queries (as strings) that will be
+      executed after restoring the DB
 
     Example for the `git` value:
 
@@ -90,7 +99,7 @@ def patch_config(config: Dict, patch_location: Optional[Text]) -> Dict:
         ]
     """
 
-    base_config = {"owner": None, "git": []}
+    base_config = {"owner": None, "git": [], "setup_queries": []}
 
     for k, v in config.items():
         base_config[k] = v

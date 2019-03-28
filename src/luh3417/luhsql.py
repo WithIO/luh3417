@@ -4,6 +4,7 @@ from subprocess import DEVNULL, PIPE
 from typing import List, Optional, Text, TextIO
 
 from luh3417.luhfs import LocalLocation, Location, SshLocation
+from luh3417.luhssh import SshManager
 from luh3417.utils import LuhError
 
 
@@ -14,9 +15,11 @@ def create_from_source(wp_config, source: Location):
     """
 
     if isinstance(source, SshLocation):
-        ssh_proxy = f"{source.user}@{source.host}"
+        ssh_user = source.user
+        ssh_host = source.host
     elif isinstance(source, LocalLocation):
-        ssh_proxy = None
+        ssh_user = None
+        ssh_host = None
     else:
         raise LuhError(f"Unknown source type: {source.__class__.__name__}")
 
@@ -25,7 +28,8 @@ def create_from_source(wp_config, source: Location):
         user=wp_config["db_user"],
         password=wp_config["db_password"],
         db_name=wp_config["db_name"],
-        ssh_proxy=ssh_proxy,
+        ssh_user=ssh_user,
+        ssh_host=ssh_host,
     )
 
 
@@ -39,15 +43,16 @@ class LuhSql:
     user: Text
     password: Text
     db_name: Text
-    ssh_proxy: Optional[Text]
+    ssh_user: Optional[Text]
+    ssh_host: Optional[Text]
 
     def args(self, args: List[Text]):
         """
         Generates the args to run a command
         """
 
-        if self.ssh_proxy:
-            return ["ssh", "-C", self.ssh_proxy] + args
+        if self.ssh_host and self.ssh_user:
+            return SshManager.instance(self.ssh_user, self.ssh_host).get_args(args)
         else:
             return args
 
@@ -113,3 +118,31 @@ class LuhSql:
 
         if p.returncode:
             raise LuhError(f"Could not import MySQL DB: {err}")
+
+    def run_query(self, query: Text):
+        """
+        Runs a single SQL query
+        """
+
+        p = subprocess.Popen(
+            self.args(
+                [
+                    "mysql",
+                    "-u",
+                    self.user,
+                    f"-p{self.password}",
+                    "-h",
+                    self.host,
+                    self.db_name,
+                ]
+            ),
+            stderr=PIPE,
+            stdout=DEVNULL,
+            stdin=PIPE,
+            encoding="utf-8",
+        )
+
+        _, err = p.communicate(query)
+
+        if p.returncode:
+            raise LuhError(f"Could not run MySQL query: {err}")

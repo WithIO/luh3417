@@ -7,6 +7,7 @@ from shlex import quote
 from subprocess import CompletedProcess, Popen
 from typing import Text, Tuple
 
+from luh3417.luhssh import SshManager
 from luh3417.utils import LuhError
 
 SSH_RE = re.compile(r"^([a-zA-Z0-9_-]+)@((?:[a-zA-Z0-9-]+\.)*(?:[a-zA-Z0-9-]+)):(.*)$")
@@ -161,8 +162,7 @@ class SshLocation(Location):
 
         kwargs = dict(kwargs, encoding="utf-8")
 
-        new_args = ["ssh", "-A", self.ssh_target]
-        new_args.extend(args)
+        new_args = SshManager.instance(self.user, self.host).get_args(args)
 
         cp = subprocess.run(new_args, *p_args, **kwargs)
 
@@ -179,8 +179,7 @@ class SshLocation(Location):
         that the SSH command will be prepended to the args.
         """
 
-        new_args = ["ssh", "-A", self.ssh_target]
-        new_args.extend(args)
+        new_args = SshManager.instance(self.user, self.host).get_args(args)
 
         cp = subprocess.Popen(new_args, *p_args, **kwargs)
 
