@@ -34,6 +34,28 @@ def create_from_source(wp_config, source: Location):
     )
 
 
+def create_root_from_source(wp_config, mysql_root, source: Location) -> "LuhSql":
+    """
+    Based on the regular DB accessor, create a root version which will be able
+    to run DB manipulation queries
+    """
+
+    db = create_from_source(wp_config, source)
+    method = mysql_root.get("method")
+    options = mysql_root.get("options", {})
+
+    try:
+        if method == "socket":
+            db.db_name = None
+            db.user = options.get("mysql_user", "root")
+            db.sudo_user = options.get("sudo_user")
+            return db
+        else:
+            raise LuhError(f"Wrong MySQL root method: {method}")
+    except KeyError as e:
+        raise LuhError(f"Missing key for mysql_root: {e}")
+
+
 def patch_sql_dump(source_path: Text, dest_path: Text, replace: ReplaceMap):
     """
     Patches the SQL dump found at source_path into a new SQL dump found in
@@ -64,16 +86,62 @@ class LuhSql:
     db_name: Text
     ssh_user: Optional[Text]
     ssh_host: Optional[Text]
+    sudo_user: Optional[Text] = None
 
-    def args(self, args: List[Text]):
+    def ssh_args(self, args: List[Text]) -> List[Text]:
         """
-        Generates the args to run a command
+        Appends SSH connection args if required
         """
 
         if self.ssh_host and self.ssh_user:
             return SshManager.instance(self.ssh_user, self.ssh_host).get_args(args)
         else:
             return args
+
+    def sudo_args(self, args: List[Text]) -> List[Text]:
+        """
+        Appends sudo privilege escalation args if required
+        """
+
+        if self.sudo_user:
+            return ["sudo", "-u", self.sudo_user] + list(args)
+        else:
+            return list(args)
+
+    def mysql_args(
+        self, command: Text, extra_args: Optional[List[Text]] = None
+    ) -> List[Text]:
+        """
+        Generates the MySQL connection arguments depending on the connection
+        method and so on
+        """
+
+        out = [command] + (extra_args if extra_args else [])
+
+        if self.password:
+            out += [f"-p{self.password}"]
+
+        out += ["-u", self.user]
+        out += ["-h", self.host]
+
+        if self.db_name:
+            out += [self.db_name]
+
+        return out
+
+    def args(
+        self, command: Text, extra_args: Optional[List[Text]] = None
+    ) -> List[Text]:
+        """
+        Generates the proper arguments for this command and the connection
+        configuration
+        """
+
+        args = self.mysql_args(command, extra_args)
+        args = self.sudo_args(args)
+        args = self.ssh_args(args)
+
+        return args
 
     def dump_to_file(self, file_path: Text):
         """
@@ -82,18 +150,7 @@ class LuhSql:
 
         with open(file_path, "w", encoding="utf-8") as f:
             p = subprocess.Popen(
-                self.args(
-                    [
-                        "mysqldump",
-                        "--hex-blob",
-                        "-u",
-                        self.user,
-                        f"-p{self.password}",
-                        "-h",
-                        self.host,
-                        self.db_name,
-                    ]
-                ),
+                self.args("mysqldump", ["--hex-blob"]),
                 stderr=PIPE,
                 stdout=f,
                 stdin=DEVNULL,
@@ -113,21 +170,7 @@ class LuhSql:
         """
 
         p = subprocess.Popen(
-            self.args(
-                [
-                    "mysql",
-                    "-u",
-                    self.user,
-                    f"-p{self.password}",
-                    "-h",
-                    self.host,
-                    self.db_name,
-                ]
-            ),
-            stderr=PIPE,
-            stdout=DEVNULL,
-            stdin=fp,
-            encoding="utf-8",
+            self.args("mysql"), stderr=PIPE, stdout=DEVNULL, stdin=fp, encoding="utf-8"
         )
 
         _, err = p.communicate()
@@ -141,17 +184,7 @@ class LuhSql:
         """
 
         p = subprocess.Popen(
-            self.args(
-                [
-                    "mysql",
-                    "-u",
-                    self.user,
-                    f"-p{self.password}",
-                    "-h",
-                    self.host,
-                    self.db_name,
-                ]
-            ),
+            self.args("mysql"),
             stderr=PIPE,
             stdout=DEVNULL,
             stdin=PIPE,

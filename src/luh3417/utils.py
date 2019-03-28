@@ -55,3 +55,12 @@ def make_doer(name):
     doing.logger = logger
 
     return doing
+
+
+def escape(string, char):
+    """
+    Quotes a string with the given char. By example:
+
+    >>> assert escape("O'Neil", "'") == "'O\\'Neil'"
+    """
+    return char + string.replace(char, f"\\{char}") + char

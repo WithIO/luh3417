@@ -7,6 +7,7 @@ from luh3417.luhphp import set_wp_config_values
 from luh3417.luhsql import create_from_source, patch_sql_dump
 from luh3417.luhssh import SshManager
 from luh3417.restore import (
+    ensure_db_exists,
     get_remote,
     get_wp_config,
     make_replace_map,
@@ -95,8 +96,16 @@ def main():
                 with doing("Changing files owner"):
                     remote.chown(config["owner"])
 
-            with doing("Restoring DB"):
+            with doing("Reading WP config"):
                 wp_config = get_wp_config(config)
+
+            if config["mysql_root"]:
+                mysql_root = config["mysql_root"]
+
+                with doing("Ensuring that DB and user exist"):
+                    ensure_db_exists(wp_config, mysql_root, remote)
+
+            with doing("Restoring DB"):
                 db = create_from_source(wp_config, remote)
                 restore_db(db, dump)
 

@@ -3,10 +3,10 @@ from json import JSONDecodeError
 from typing import Text, Dict, Optional, List
 
 from luh3417.luhfs import Location, parse_location
-from luh3417.luhsql import LuhSql
+from luh3417.luhsql import LuhSql, create_root_from_source
 from luh3417.serialized_replace import ReplaceMap
 from luh3417.snapshot import copy_files
-from luh3417.utils import LuhError
+from luh3417.utils import LuhError, escape
 
 
 def read_config(file_path: Text):
@@ -87,6 +87,26 @@ def make_replace_map(replace_in_dump: List[Dict[Text, Text]]) -> ReplaceMap:
     ]
 
 
+def ensure_db_exists(wp_config, mysql_root, source: Location):
+    """
+    If a database is pre-existing, delete it. Then create a new one and create
+    the appropriate user.
+    """
+
+    db = create_root_from_source(wp_config, mysql_root, source)
+
+    name = escape(wp_config["db_name"], "`")
+    user = escape(wp_config["db_user"], "`")
+    host = escape(wp_config["db_host"], "`")
+    password = escape(wp_config["db_password"], "'")
+
+    db.run_query(f"drop database if exists {name};")
+    db.run_query(f"create database {name};")
+    db.run_query(
+        f"grant all privileges on {name}.* to {user}@{host} identified by {password};"
+    )
+
+
 def patch_config(config: Dict, patch_location: Optional[Text]) -> Dict:
     """
     Applies a configuration patch from the source patch file, which will
@@ -128,6 +148,7 @@ def patch_config(config: Dict, patch_location: Optional[Text]) -> Dict:
         "setup_queries": [],
         "php_define": {},
         "replace_in_dump": [],
+        "mysql_root": None,
     }
 
     for k, v in config.items():
