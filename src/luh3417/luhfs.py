@@ -284,11 +284,11 @@ class SshLocation(Location):
         cp = self.ssh_run(
             ["chown", "-R", owner, self.path],
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
         )
 
         if cp.returncode:
-            raise LuhError(f"Failed to chown: {cp.stderr}")
+            raise LuhError(f"Failed to chown: {cp.stderr[:1000]}")
 
     def run_script(self, script: Text) -> Tuple[Text, Text, int]:
         """
@@ -376,11 +376,11 @@ class LocalLocation(Location):
         cp = subprocess.run(
             ["chown", "-R", owner, self.path],
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
         )
 
         if cp.returncode:
-            raise LuhError(f"Failed to chown: {cp.stderr}")
+            raise LuhError(f"Failed to chown: {cp.stderr[:1000]}")
 
     def run_script(self, script: Text) -> Tuple[Text, Text, int]:
         """

@@ -6,10 +6,11 @@ from tempfile import TemporaryDirectory
 from typing import Dict, Text
 
 from luh3417.luhfs import Location, parse_location
+from luh3417.luhphp import parse_wp_config
 from luh3417.luhsql import create_from_source
 from luh3417.luhssh import SshManager
 from luh3417.snapshot import copy_files
-from luh3417.utils import make_doer, parse_wp_config, setup_logging
+from luh3417.utils import make_doer, setup_logging
 
 doing = make_doer("luh3417.snapshot")
 
@@ -116,7 +117,7 @@ def main():
                 archive_location.archive_local_dir(d)
                 doing.logger.info("Wrote archive %s", archive_location)
     except KeyboardInterrupt:
-        doing.logger.info('Quitting due to user signal')
+        doing.logger.info("Quitting due to user signal")
     finally:
         SshManager.shutdown()
 

@@ -87,6 +87,7 @@ def patch_config(config: Dict, patch_location: Optional[Text]) -> Dict:
     - `git` - A list of repositories to clone (cf below).
     - `setup_queries` - A list of SQL queries (as strings) that will be
       executed after restoring the DB
+    - `php_define` - A dictionary of constant/value to be defined in wp-config
 
     Example for the `git` value:
 
@@ -99,7 +100,7 @@ def patch_config(config: Dict, patch_location: Optional[Text]) -> Dict:
         ]
     """
 
-    base_config = {"owner": None, "git": [], "setup_queries": []}
+    base_config = {"owner": None, "git": [], "setup_queries": [], "php_define": {}}
 
     for k, v in config.items():
         base_config[k] = v

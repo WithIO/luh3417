@@ -123,7 +123,7 @@ class SshManager:
             stderr=PIPE,
         )
 
-        doing.logger.debug(f'Process {self.process.pid} created')
+        doing.logger.debug(f"Process {self.process.pid} created")
 
     def cleanup(self):
         """

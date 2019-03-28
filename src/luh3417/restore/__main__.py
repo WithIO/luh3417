@@ -3,6 +3,7 @@ from os.path import join
 from tempfile import TemporaryDirectory
 
 from luh3417.luhfs import Location, parse_location
+from luh3417.luhphp import set_wp_config_values
 from luh3417.luhsql import create_from_source
 from luh3417.luhssh import SshManager
 from luh3417.restore import (
@@ -57,6 +58,12 @@ def main():
             with doing("Reading configuration"):
                 config = patch_config(read_config(join(d, "settings.json")), args.patch)
 
+            if config["php_define"]:
+                with doing("Patch wp-config.php"):
+                    set_wp_config_values(
+                        config["php_define"], join(d, "wordpress", "wp-config.php")
+                    )
+
             with doing("Restoring files"):
                 remote = get_remote(config)
                 restore_files(join(d, "wordpress"), remote)
@@ -86,7 +93,7 @@ def main():
                 with doing("Running setup queries"):
                     run_queries(db, config["setup_queries"])
     except KeyboardInterrupt:
-        doing.logger.info('Quitting due to user signal')
+        doing.logger.info("Quitting due to user signal")
     finally:
         SshManager.shutdown()
 
