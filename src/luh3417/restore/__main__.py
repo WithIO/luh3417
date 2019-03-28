@@ -4,11 +4,12 @@ from tempfile import TemporaryDirectory
 
 from luh3417.luhfs import Location, parse_location
 from luh3417.luhphp import set_wp_config_values
-from luh3417.luhsql import create_from_source
+from luh3417.luhsql import create_from_source, patch_sql_dump
 from luh3417.luhssh import SshManager
 from luh3417.restore import (
     get_remote,
     get_wp_config,
+    make_replace_map,
     patch_config,
     read_config,
     restore_db,
@@ -58,6 +59,16 @@ def main():
             with doing("Reading configuration"):
                 config = patch_config(read_config(join(d, "settings.json")), args.patch)
 
+            dump = join(d, "dump.sql")
+
+            if config["replace_in_dump"]:
+                with doing("Patch the SQL dump"):
+                    new_dump = join(d, "dump_patched.sql")
+                    patch_sql_dump(
+                        dump, new_dump, make_replace_map(config["replace_in_dump"])
+                    )
+                    dump = new_dump
+
             if config["php_define"]:
                 with doing("Patch wp-config.php"):
                     set_wp_config_values(
@@ -87,7 +98,7 @@ def main():
             with doing("Restoring DB"):
                 wp_config = get_wp_config(config)
                 db = create_from_source(wp_config, remote)
-                restore_db(db, join(d, "dump.sql"))
+                restore_db(db, dump)
 
             if config["setup_queries"]:
                 with doing("Running setup queries"):

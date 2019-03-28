@@ -4,6 +4,7 @@ from typing import Text, Dict, Optional, List
 
 from luh3417.luhfs import Location, parse_location
 from luh3417.luhsql import LuhSql
+from luh3417.serialized_replace import ReplaceMap
 from luh3417.snapshot import copy_files
 from luh3417.utils import LuhError
 
@@ -75,6 +76,17 @@ def run_queries(db: LuhSql, queries: List[Text]):
         db.run_query(query)
 
 
+def make_replace_map(replace_in_dump: List[Dict[Text, Text]]) -> ReplaceMap:
+    """
+    Transforms the config/patch syntax into an internal ReplaceMap
+    """
+
+    return [
+        (x["search"].encode("utf-8"), x["replace"].encode("utf-8"))
+        for x in replace_in_dump
+    ]
+
+
 def patch_config(config: Dict, patch_location: Optional[Text]) -> Dict:
     """
     Applies a configuration patch from the source patch file, which will
@@ -88,6 +100,7 @@ def patch_config(config: Dict, patch_location: Optional[Text]) -> Dict:
     - `setup_queries` - A list of SQL queries (as strings) that will be
       executed after restoring the DB
     - `php_define` - A dictionary of constant/value to be defined in wp-config
+    - `replace_in_dump` - Replaces a list of values in the SQL dump
 
     Example for the `git` value:
 
@@ -98,9 +111,24 @@ def patch_config(config: Dict, patch_location: Optional[Text]) -> Dict:
                 "version": "master"
             }
         ]
+
+    Example for the `replace_in_dump` value:
+
+        "replace_in_dump": [
+            {
+                "search": "https://old-domain.com",
+                "replace": "https://new-domain.com"
+            }
+        ]
     """
 
-    base_config = {"owner": None, "git": [], "setup_queries": [], "php_define": {}}
+    base_config = {
+        "owner": None,
+        "git": [],
+        "setup_queries": [],
+        "php_define": {},
+        "replace_in_dump": [],
+    }
 
     for k, v in config.items():
         base_config[k] = v

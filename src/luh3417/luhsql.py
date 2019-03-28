@@ -5,6 +5,7 @@ from typing import List, Optional, Text, TextIO
 
 from luh3417.luhfs import LocalLocation, Location, SshLocation
 from luh3417.luhssh import SshManager
+from luh3417.serialized_replace import ReplaceMap, walk
 from luh3417.utils import LuhError
 
 
@@ -31,6 +32,24 @@ def create_from_source(wp_config, source: Location):
         ssh_user=ssh_user,
         ssh_host=ssh_host,
     )
+
+
+def patch_sql_dump(source_path: Text, dest_path: Text, replace: ReplaceMap):
+    """
+    Patches the SQL dump found at source_path into a new SQL dump found in
+    dest_path. It will use the replace map to replace values.
+
+    Values are replaced in a holistic way so that PHP serialized values are
+    not broken and escaped character are detected as such. This is by far not
+    perfect but seems sufficient for most use cases.
+    """
+
+    try:
+        with open(source_path, "rb") as i, open(dest_path, "wb") as o:
+            for line in i:
+                o.write(walk(line, replace))
+    except OSError as e:
+        raise LuhError(f"Could not open SQL dump: {e}")
 
 
 @dataclass
