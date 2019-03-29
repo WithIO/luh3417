@@ -30,6 +30,11 @@ def parse_args() -> Namespace:
     parser = ArgumentParser(description="Restores a snapshot")
 
     parser.add_argument("-p", "--patch", help="A settings patch file")
+    parser.add_argument(
+        "-a",
+        "--allow-in-place",
+        help="Allow to restore the backup in-place, overriding its origin",
+    )
 
     parser.add_argument(
         "snapshot",

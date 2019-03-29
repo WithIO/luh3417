@@ -107,13 +107,17 @@ def ensure_db_exists(wp_config, mysql_root, source: Location):
     )
 
 
-def patch_config(config: Dict, patch_location: Optional[Text]) -> Dict:
+def patch_config(
+    config: Dict, patch_location: Optional[Text], allow_in_place: bool = False
+) -> Dict:
     """
     Applies a configuration patch from the source patch file, which will
     alter the restoration process.
 
     Available options:
 
+    - `wp_config` - WordPress configuration (database user and so on)
+    - `source`
     - `owner` - Same syntax as chown owner, changes the ownership of restored
       files
     - `git` - A list of repositories to clone (cf below).
@@ -163,7 +167,21 @@ def patch_config(config: Dict, patch_location: Optional[Text]) -> Dict:
         except JSONDecodeError as e:
             raise LuhError(f"Could not decode patch file: {e}")
         else:
+            if not allow_in_place:
+                try:
+                    assert patch["args"]["source"]
+                except (AssertionError, KeyError):
+                    raise LuhError(
+                        "The patch did not override the source location "
+                        "and the --allow-in-place flag is not set"
+                    )
+
             for k, v in patch.items():
                 base_config[k] = v
+    else:
+        raise LuhError(
+            "If you do not set the --allow-in-place flag you must provide a "
+            "patch which overrides the source location"
+        )
 
     return base_config

@@ -1,3 +1,4 @@
+from shlex import quote
 from shutil import rmtree
 from subprocess import DEVNULL, PIPE, Popen, TimeoutExpired
 from tempfile import mkdtemp
@@ -157,7 +158,7 @@ class SshManager:
             options={"ControlPath": self.control, "ControlMaster": "no"},
             compress=self.compress,
             forward_agent=self.forward_agent,
-        ) + list(args)
+        ) + [quote(a) for a in args]
 
     @classmethod
     def instance(cls, user, host, port=None) -> "SshManager":
