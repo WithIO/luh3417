@@ -118,6 +118,15 @@ def install_outer_files(outer_files: List[Dict], source: Location):
         location.set_content(f["content"])
 
 
+def run_post_install(post_install: List[Text], source: Location):
+    """
+    Running the post-install scripts
+    """
+
+    for script in post_install:
+        source.run_script(script)
+
+
 def patch_config(
     config: Dict, patch_location: Optional[Location], allow_in_place: bool = False
 ) -> Dict:
@@ -139,6 +148,8 @@ def patch_config(
     - `mysql_root` - Method and options to become root of MySQL (see the
        README)
     - `outer_files` - Files to place on the host's filesystem
+    - `post_install` - A list of Bash scripts to be executed when the install
+      is done
 
     Example for the `git` value:
 
@@ -181,6 +192,7 @@ def patch_config(
         "replace_in_dump": [],
         "mysql_root": None,
         "outer_files": [],
+        "post_install": [],
     }
 
     for k, v in config.items():

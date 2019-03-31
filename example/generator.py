@@ -2,6 +2,7 @@ import re
 from os import getenv
 from os.path import basename, join
 from typing import Text
+from shlex import quote
 
 from luh3417.luhfs import parse_location
 from luh3417.transfer import UnknownEnvironment
@@ -132,6 +133,9 @@ def get_patch(origin: Text, target: Text):
     - mysql_root -- On all environments except production, automatically
       manage the DB and DB user.
     - replace_in_dump -- Replaces in the dump the old URL with the new URL
+    - outer_files -- Setup the virtual host and robots.txt
+    - post_install -- Reload Apache virtual hosts. In local, add the local
+      domain to /etc/hosts
     """
 
     if target == "local":
@@ -159,6 +163,24 @@ def get_patch(origin: Text, target: Text):
             "content": "User-agent: *\nDisallow: /\n"
         })
 
+    if target == 'local':
+        bash_prefix = 'sudo'
+    else:
+        bash_prefix = ''
+
+    post_install = [
+        f"{bash_prefix} a2ensite {get_domain(target)}",
+        f"{bash_prefix} systemctl reload apache2",
+    ]
+
+    if target == 'local':
+        line = f'127.0.0.1 {get_domain(target)}'
+
+        post_install += [
+            f"grep -qxF {quote(line)} /etc/hosts || "
+            f"echo {quote(line)} | sudo dd of=/etc/hosts oflag=append conv=notrunc"
+        ]
+
     return {
         "owner": None if target == "local" else "www-data:",
         "git": [
@@ -174,6 +196,7 @@ def get_patch(origin: Text, target: Text):
             {"search": get_base_url(origin), "replace": get_base_url(target)}
         ],
         "outer_files": outer_files,
+        "post_install": post_install,
     }
 
 

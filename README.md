@@ -299,6 +299,20 @@ at the specified absolute location.
 > create those files, so the local/remote user must have the rights to create
 > those files.
 
+##### `post_install`
+
+Those are shell scripts which run on the host server after the install is
+complete. Typically, you can enable your virtual host and reload Apache.
+
+```json
+{
+    "post_install": [
+        "a2ensite my-website.com",
+        "systemctl reload apache2"
+    ]
+}
+```
+
 ### `transfer`
 
 The main goal of this package is to allow the setup of a custom workflow that

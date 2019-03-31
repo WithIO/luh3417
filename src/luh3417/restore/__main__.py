@@ -16,6 +16,7 @@ from luh3417.restore import (
     read_config,
     restore_db,
     restore_files,
+    run_post_install,
     run_queries,
 )
 from luh3417.utils import make_doer, run_main, setup_logging
@@ -120,6 +121,10 @@ def main(args: Optional[Sequence[str]] = None):
         if config["outer_files"]:
             with doing("Creating outer files"):
                 install_outer_files(config["outer_files"], remote)
+
+        if config["post_install"]:
+            with doing("Running post install scripts"):
+                run_post_install(config["post_install"], remote)
 
 
 if __name__ == "__main__":
