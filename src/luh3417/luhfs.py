@@ -44,6 +44,20 @@ class Location:
 
         raise NotImplementedError
 
+    def set_content(self, content) -> None:
+        """
+        Creates or overrides the file so it receives the provided content.
+        The parent directory must exist and the location must not be a
+        directory.
+        """
+
+        out, err, ret = self.run_script(
+            f"echo -n {quote(content)} > {quote(self.path)}"
+        )
+
+        if ret:
+            raise LuhError(f"Cannot set content: {err}")
+
     def ensure_exists_as_dir(self) -> None:
         """
         This ensures that the location is a directory and exists (as well as

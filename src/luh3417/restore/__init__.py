@@ -107,6 +107,17 @@ def ensure_db_exists(wp_config, mysql_root, source: Location):
     )
 
 
+def install_outer_files(outer_files: List[Dict], source: Location):
+    """
+    Given the list of outer files, sets the appropriate content to the
+    appropriate location
+    """
+
+    for f in outer_files:
+        location = source.child(f["name"])
+        location.set_content(f["content"])
+
+
 def patch_config(
     config: Dict, patch_location: Optional[Location], allow_in_place: bool = False
 ) -> Dict:
@@ -125,6 +136,9 @@ def patch_config(
       executed after restoring the DB
     - `php_define` - A dictionary of constant/value to be defined in wp-config
     - `replace_in_dump` - Replaces a list of values in the SQL dump
+    - `mysql_root` - Method and options to become root of MySQL (see the
+       README)
+    - `outer_files` - Files to place on the host's filesystem
 
     Example for the `git` value:
 
@@ -144,6 +158,19 @@ def patch_config(
                 "replace": "https://new-domain.com"
             }
         ]
+
+    Example for the `outer_files` value:
+
+        "outer_files": [
+            {
+                "name": "robots.txt",
+                "content": "User-agent: *\nDisallow: /\n"
+            },
+            {
+                "name": "/etc/apache2/sites-available/my-host.conf",
+                "content": "<VirtualHost> ..."
+            }
+        ]
     """
 
     base_config = {
@@ -153,6 +180,7 @@ def patch_config(
         "php_define": {},
         "replace_in_dump": [],
         "mysql_root": None,
+        "outer_files": [],
     }
 
     for k, v in config.items():

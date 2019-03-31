@@ -10,6 +10,7 @@ from luh3417.restore import (
     ensure_db_exists,
     get_remote,
     get_wp_config,
+    install_outer_files,
     make_replace_map,
     patch_config,
     read_config,
@@ -115,6 +116,10 @@ def main(args: Optional[Sequence[str]] = None):
         if config["setup_queries"]:
             with doing("Running setup queries"):
                 run_queries(db, config["setup_queries"])
+
+        if config["outer_files"]:
+            with doing("Creating outer files"):
+                install_outer_files(config["outer_files"], remote)
 
 
 if __name__ == "__main__":

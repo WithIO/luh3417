@@ -3,17 +3,18 @@ from os import getenv
 from os.path import basename, join
 from typing import Text
 
+from luh3417.luhfs import parse_location
 from luh3417.transfer import UnknownEnvironment
 from luh3417.utils import random_password
 
 DEV_SERVER = "root@my-dev-server.com"
 PROD_SERVER = "root@my-prod-server.com"
 
-PROD_URL = "https://www.my-website.com"
-
+PROD_DOMAIN = "www.my-website.com"
 DEV_DOMAIN = "my-org.com"
 
 PROJECT = "foo"
+WILDCARD_NAME = 'my-org'
 
 THEME_NAME = "jupiter-child"
 THEME_REPO = "git@gitlab.com:my-org/jupiter_child.git"
@@ -145,6 +146,19 @@ def get_patch(origin: Text, target: Text):
     else:
         mysql_root = {"method": "socket"}
 
+    outer_files = [
+        {
+            "name": f"/etc/apache2/sites-available/{get_domain(target)}.conf",
+            "content": make_virtual_host(target),
+        }
+    ]
+
+    if target != "prod":
+        outer_files.append({
+            "name": "robots.txt",
+            "content": "User-agent: *\nDisallow: /\n"
+        })
+
     return {
         "owner": None if target == "local" else "www-data:",
         "git": [
@@ -159,6 +173,7 @@ def get_patch(origin: Text, target: Text):
         "replace_in_dump": [
             {"search": get_base_url(origin), "replace": get_base_url(target)}
         ],
+        "outer_files": outer_files,
     }
 
 
@@ -211,22 +226,75 @@ def get_git_version(environment: Text):
         return environment
 
 
-def get_base_url(environment: Text):
+def get_base_url(environment: Text) -> Text:
     """
     Utility method to determine the domain name to use depending on the
     environment.
     """
 
+    return f"https://{get_domain(environment)}"
+
+
+def get_domain(environment: Text) -> Text:
+    """
+    Computes the domain name provided the environment
+    """
+
     m = re.match(FEATURE_RE, environment)
 
     if environment == "prod":
-        return PROD_URL
+        return PROD_DOMAIN
     elif environment == "staging":
-        return f"https://{PROJECT}-wp.{DEV_DOMAIN}"
+        return f"{PROJECT}-wp.{DEV_DOMAIN}"
     elif environment == "develop":
-        return f"https://{PROJECT}-wp-dev.{DEV_DOMAIN}"
+        return f"{PROJECT}-wp-dev.{DEV_DOMAIN}"
     elif environment == "local":
         user = basename(getenv("HOME"))
-        return f"https://{user}-{PROJECT}.{DEV_DOMAIN}"
+        return f"{user}-{PROJECT}.{DEV_DOMAIN}"
     elif m:
-        return f"https://{PROJECT}-wp-feature-{m.group(1)}.{DEV_DOMAIN}"
+        return f"{PROJECT}-wp-feature-{m.group(1)}.{DEV_DOMAIN}"
+
+
+def get_install_dir(environment: Text) -> Text:
+    """
+    Returns the installation path of the environment on the server
+    """
+
+    return parse_location(get_source(environment)).path
+
+
+def make_virtual_host(environment: Text) -> Text:
+    """
+    Generates a virtual environment file for the given environment
+    """
+
+    return f"""
+        <VirtualHost *:443>
+            ServerName {get_domain(environment)}
+            DocumentRoot {get_install_dir(environment)}
+
+            ErrorLog ${{APACHE_LOG_DIR}}/{get_domain(environment)}.{DEV_DOMAIN}_error.log
+            CustomLog ${{APACHE_LOG_DIR}}/{get_domain(environment)}.{DEV_DOMAIN}_access.log combined
+
+            SSLEngine on
+            SSLCertificateFile /etc/apache2/ssl/{WILDCARD_NAME}.crt
+            SSLCertificateKeyFile /etc/apache2/ssl/{WILDCARD_NAME}.key
+            SSLCertificateChainFile /etc/apache2/ssl/{WILDCARD_NAME}.chain
+        
+            SSLCipherSuite EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH
+            SSLProtocol All -SSLv2 -SSLv3 -TLSv1 -TLSv1.1
+            SSLHonorCipherOrder On
+
+            <Directory {get_install_dir(environment)}>
+                Require all granted
+                AllowOverride all
+            </Directory>
+        </VirtualHost>
+
+        <VirtualHost *:80>
+            ServerName {get_domain(environment)}
+            DocumentRoot {get_install_dir(environment)}
+            Redirect permanent / https://{get_domain(environment)}/
+        </VirtualHost>
+"""
+

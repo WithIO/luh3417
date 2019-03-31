@@ -147,7 +147,7 @@ Set this one to define where to restore the archive.
 }
 ```
 
-#### `wp_config`
+##### `wp_config`
 
 Database configuration from the WordPress
 
@@ -273,6 +273,31 @@ About the options:
 - `sudo_user` &mdash; don't set it if you don't need to sudo to use the socket,
   set it to `root` or whichever user is right otherwise.
 - `mysql_user` &mdash; name of the MySQL user to use
+
+##### `outer_files`
+
+Creates files on the server's file system. If the file name is relative then
+the file is created relatively to the WordPress's root, otherwise it is created
+at the specified absolute location.
+
+```json
+{
+    "outer_files": [
+        {
+            "name": "robots.txt",
+            "content": "User-agent: *\nDisallow: /\n"
+        },
+        {
+            "name": "/etc/apache2/sites-available/my-host.conf",
+            "content": "<VirtualHost> ..."
+        }
+    ]
+}
+```
+
+> **NOTE** &mdash; There is not (yet) any form of privilege escalation to
+> create those files, so the local/remote user must have the rights to create
+> those files.
 
 ### `transfer`
 
