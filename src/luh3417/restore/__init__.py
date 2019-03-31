@@ -108,7 +108,7 @@ def ensure_db_exists(wp_config, mysql_root, source: Location):
 
 
 def patch_config(
-    config: Dict, patch_location: Optional[Text], allow_in_place: bool = False
+    config: Dict, patch_location: Optional[Location], allow_in_place: bool = False
 ) -> Dict:
     """
     Applies a configuration patch from the source patch file, which will
@@ -160,10 +160,8 @@ def patch_config(
 
     if patch_location:
         try:
-            with open(patch_location, "r", encoding="utf-8") as f:
-                patch = json.load(f)
-        except OSError as e:
-            raise LuhError(f"Could not open patch file: {e}")
+            content = patch_location.get_content()
+            patch = json.loads(content)
         except JSONDecodeError as e:
             raise LuhError(f"Could not decode patch file: {e}")
         else:

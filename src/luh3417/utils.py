@@ -104,8 +104,10 @@ def run_main(main, doing):
         main()
     except KeyboardInterrupt:
         doing.logger.info("Quitting due to user signal")
+    except SystemExit:
+        pass
     except BaseException:
-        doing.logger.exception('Unknown error')
+        doing.logger.exception("Unknown error")
     finally:
         from luh3417.luhssh import SshManager
 
