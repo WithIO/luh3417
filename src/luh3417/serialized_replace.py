@@ -93,7 +93,10 @@ def split(line):
         if ser_m:
             length = int(ser_m.group(1))
             start = i + len(ser_m.group(0))
-            is_php_ser = line[start + length : start + length + 2] == b'";'
+            try:
+                is_php_ser = line[start + length : start + length + 2] == b'";'
+            except IndexError:
+                is_php_ser = False
 
         if is_php_ser or is_json or is_mysql:
             if raw_start != i:

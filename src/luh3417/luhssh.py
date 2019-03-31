@@ -186,5 +186,11 @@ class SshManager:
         if cls._instances:
             doing.logger.debug("Shutting down SSH connections")
 
-            for manager in cls._instances.values():
+            to_delete = []
+
+            for k, manager in cls._instances.items():
                 manager.cleanup()
+                to_delete.append(k)
+
+            for k in to_delete:
+                del cls._instances[k]

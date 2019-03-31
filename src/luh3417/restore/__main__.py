@@ -1,11 +1,11 @@
 from argparse import ArgumentParser, Namespace
 from os.path import join
 from tempfile import TemporaryDirectory
+from typing import Optional, Sequence
 
 from luh3417.luhfs import Location, parse_location
 from luh3417.luhphp import set_wp_config_values
 from luh3417.luhsql import create_from_source, patch_sql_dump
-from luh3417.luhssh import SshManager
 from luh3417.restore import (
     ensure_db_exists,
     get_remote,
@@ -17,12 +17,12 @@ from luh3417.restore import (
     restore_files,
     run_queries,
 )
-from luh3417.utils import make_doer, setup_logging
+from luh3417.utils import make_doer, run_main, setup_logging
 
 doing = make_doer("luh3417.restore")
 
 
-def parse_args() -> Namespace:
+def parse_args(args: Optional[Sequence[str]] = None) -> Namespace:
     """
     Parse arguments from CLI
     """
@@ -45,83 +45,75 @@ def parse_args() -> Namespace:
         type=parse_location,
     )
 
-    return parser.parse_args()
+    return parser.parse_args(args)
 
 
-def main():
+def main(args: Optional[Sequence[str]] = None):
     """
     Executes things in order
     """
 
     setup_logging()
-    args = parse_args()
+    args = parse_args(args)
     snap: Location = args.snapshot
 
-    try:
-        with TemporaryDirectory() as d:
-            with doing("Extracting archive"):
-                snap.extract_archive_to_dir(d)
+    with TemporaryDirectory() as d:
+        with doing("Extracting archive"):
+            snap.extract_archive_to_dir(d)
 
-            with doing("Reading configuration"):
-                config = patch_config(read_config(join(d, "settings.json")), args.patch)
+        with doing("Reading configuration"):
+            config = patch_config(read_config(join(d, "settings.json")), args.patch)
 
-            dump = join(d, "dump.sql")
+        dump = join(d, "dump.sql")
 
-            if config["replace_in_dump"]:
-                with doing("Patch the SQL dump"):
-                    new_dump = join(d, "dump_patched.sql")
-                    patch_sql_dump(
-                        dump, new_dump, make_replace_map(config["replace_in_dump"])
+        if config["replace_in_dump"]:
+            with doing("Patch the SQL dump"):
+                new_dump = join(d, "dump_patched.sql")
+                patch_sql_dump(
+                    dump, new_dump, make_replace_map(config["replace_in_dump"])
+                )
+                dump = new_dump
+
+        if config["php_define"]:
+            with doing("Patch wp-config.php"):
+                set_wp_config_values(
+                    config["php_define"], join(d, "wordpress", "wp-config.php")
+                )
+
+        with doing("Restoring files"):
+            remote = get_remote(config)
+            restore_files(join(d, "wordpress"), remote)
+
+        if config["git"]:
+            with doing("Cloning Git repos"):
+                for repo in config["git"]:
+                    location = remote.child(repo["location"])
+                    location.set_git_repo(repo["repo"], repo["version"])
+                    doing.logger.info(
+                        "Cloned %s@%s to %s", repo["repo"], repo["version"], location
                     )
-                    dump = new_dump
 
-            if config["php_define"]:
-                with doing("Patch wp-config.php"):
-                    set_wp_config_values(
-                        config["php_define"], join(d, "wordpress", "wp-config.php")
-                    )
+        if config["owner"]:
+            with doing("Changing files owner"):
+                remote.chown(config["owner"])
 
-            with doing("Restoring files"):
-                remote = get_remote(config)
-                restore_files(join(d, "wordpress"), remote)
+        with doing("Reading WP config"):
+            wp_config = get_wp_config(config)
 
-            if config["git"]:
-                with doing("Cloning Git repos"):
-                    for repo in config["git"]:
-                        location = remote.child(repo["location"])
-                        location.set_git_repo(repo["repo"], repo["version"])
-                        doing.logger.info(
-                            "Cloned %s@%s to %s",
-                            repo["repo"],
-                            repo["version"],
-                            location,
-                        )
+        if config["mysql_root"]:
+            mysql_root = config["mysql_root"]
 
-            if config["owner"]:
-                with doing("Changing files owner"):
-                    remote.chown(config["owner"])
+            with doing("Ensuring that DB and user exist"):
+                ensure_db_exists(wp_config, mysql_root, remote)
 
-            with doing("Reading WP config"):
-                wp_config = get_wp_config(config)
+        with doing("Restoring DB"):
+            db = create_from_source(wp_config, remote)
+            restore_db(db, dump)
 
-            if config["mysql_root"]:
-                mysql_root = config["mysql_root"]
-
-                with doing("Ensuring that DB and user exist"):
-                    ensure_db_exists(wp_config, mysql_root, remote)
-
-            with doing("Restoring DB"):
-                db = create_from_source(wp_config, remote)
-                restore_db(db, dump)
-
-            if config["setup_queries"]:
-                with doing("Running setup queries"):
-                    run_queries(db, config["setup_queries"])
-    except KeyboardInterrupt:
-        doing.logger.info("Quitting due to user signal")
-    finally:
-        SshManager.shutdown()
+        if config["setup_queries"]:
+            with doing("Running setup queries"):
+                run_queries(db, config["setup_queries"])
 
 
 if __name__ == "__main__":
-    main()
+    run_main(main, doing)

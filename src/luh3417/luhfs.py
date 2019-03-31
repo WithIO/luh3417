@@ -85,6 +85,22 @@ class Location:
 
         raise NotImplementedError
 
+    def exists(self):
+        """
+        Returns True if this location exists
+        """
+
+        out, err, ret = self.run_script(
+            f"""
+                if [ ! -e {quote(self.path)} ]
+                then
+                    exit 1
+                fi
+            """
+        )
+
+        return not ret
+
     def set_git_repo(self, repo: Text, version: Text):
         """
         Sets the current location to be a git repo at the given version. Any

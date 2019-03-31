@@ -1,7 +1,12 @@
 from contextlib import contextmanager
+from importlib.util import module_from_spec, spec_from_file_location
 from logging import DEBUG, getLogger
+from random import SystemRandom
+from typing import Text
 
 import coloredlogs
+
+random = SystemRandom()
 
 
 class LuhError(Exception):
@@ -64,3 +69,44 @@ def escape(string, char):
     >>> assert escape("O'Neil", "'") == "'O\\'Neil'"
     """
     return char + string.replace(char, f"\\{char}") + char
+
+
+def import_file(name: Text, file_path: Text):
+    """
+    Imports a Python file as a module named luh3417.{name}
+    """
+
+    spec = spec_from_file_location(f"luh3417.{name}", file_path)
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    return module
+
+
+def random_password(
+    n=50, chars="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890/>#"
+):
+    """
+    Generates a secure random password
+    """
+
+    return "".join(random.choice(chars) for _ in range(0, n))
+
+
+def run_main(main, doing):
+    """
+    Runs a main() function while taking care to catch the appropriate
+    exceptions and do the cleaning up
+    """
+
+    # noinspection PyBroadException
+    try:
+        main()
+    except KeyboardInterrupt:
+        doing.logger.info("Quitting due to user signal")
+    except BaseException:
+        doing.logger.exception('Unknown error')
+    finally:
+        from luh3417.luhssh import SshManager
+
+        SshManager.shutdown()

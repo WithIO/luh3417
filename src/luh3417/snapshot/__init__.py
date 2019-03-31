@@ -1,6 +1,6 @@
-from luh3417.luhfs import Location
 import subprocess
 
+from luh3417.luhfs import Location
 from luh3417.utils import LuhError
 
 

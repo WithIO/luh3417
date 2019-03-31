@@ -1,6 +1,6 @@
 import json
 from json import JSONDecodeError
-from typing import Text, Dict, Optional, List
+from typing import Dict, List, Optional, Text
 
 from luh3417.luhfs import Location, parse_location
 from luh3417.luhsql import LuhSql, create_root_from_source

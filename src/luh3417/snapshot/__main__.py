@@ -3,19 +3,18 @@ from argparse import ArgumentParser, Namespace
 from datetime import datetime
 from os.path import join
 from tempfile import TemporaryDirectory
-from typing import Dict, Text
+from typing import Dict, Optional, Sequence, Text
 
 from luh3417.luhfs import Location, parse_location
 from luh3417.luhphp import parse_wp_config
 from luh3417.luhsql import create_from_source
-from luh3417.luhssh import SshManager
 from luh3417.snapshot import copy_files
-from luh3417.utils import make_doer, setup_logging
+from luh3417.utils import make_doer, run_main, setup_logging
 
 doing = make_doer("luh3417.snapshot")
 
 
-def parse_args() -> Namespace:
+def parse_args(args: Optional[Sequence[str]] = None) -> Namespace:
     """
     Parse arguments fro the snapshot
     """
@@ -51,7 +50,7 @@ def parse_args() -> Namespace:
         default="{base}_{time}.tar.gz",
     )
 
-    return parser.parse_args()
+    return parser.parse_args(args)
 
 
 def make_dump_file_name(args: Namespace, wp_config: Dict, now: datetime) -> Location:
@@ -84,43 +83,40 @@ def dump_settings(args: Namespace, wp_config: Dict, now: datetime, file_path: Te
         json.dump(content, f, indent=4)
 
 
-def main():
+def main(args: Optional[Sequence[str]] = None):
     """
     Executes things in order
     """
 
     setup_logging()
-    args = parse_args()
+    args = parse_args(args)
     now = datetime.utcnow()
 
-    try:
-        with doing("Parsing remote configuration"):
-            wp_config = parse_wp_config(args.source)
+    with doing("Parsing remote configuration"):
+        wp_config = parse_wp_config(args.source)
 
-        with TemporaryDirectory() as d:
-            work_location = parse_location(d)
+    with TemporaryDirectory() as d:
+        work_location = parse_location(d)
 
-            with doing("Saving settings"):
-                dump_settings(args, wp_config, now, join(d, "settings.json"))
+        with doing("Saving settings"):
+            dump_settings(args, wp_config, now, join(d, "settings.json"))
 
-            with doing("Copying database"):
-                db = create_from_source(wp_config, args.source)
-                db.dump_to_file(join(d, "dump.sql"))
+        with doing("Copying database"):
+            db = create_from_source(wp_config, args.source)
+            db.dump_to_file(join(d, "dump.sql"))
 
-            with doing("Copying files"):
-                copy_files(args.source, work_location.child("wordpress"))
+        with doing("Copying files"):
+            copy_files(args.source, work_location.child("wordpress"))
 
-            with doing("Writing archive"):
-                args.backup_dir.ensure_exists_as_dir()
-                archive_location = make_dump_file_name(args, wp_config, now)
+        with doing("Writing archive"):
+            args.backup_dir.ensure_exists_as_dir()
+            archive_location = make_dump_file_name(args, wp_config, now)
 
-                archive_location.archive_local_dir(d)
-                doing.logger.info("Wrote archive %s", archive_location)
-    except KeyboardInterrupt:
-        doing.logger.info("Quitting due to user signal")
-    finally:
-        SshManager.shutdown()
+            archive_location.archive_local_dir(d)
+            doing.logger.info("Wrote archive %s", archive_location)
+
+    return archive_location
 
 
 if __name__ == "__main__":
-    main()
+    run_main(main, doing)
