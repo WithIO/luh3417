@@ -148,8 +148,8 @@ def main(args: Optional[Sequence[str]] = None):
         with doing(f"Overriding {args.target} with {args.origin}"):
             restore(["-p", pf.name, f"{origin_archive}"])
 
-    if hasattr(gen, 'post_exec'):
-        with doing('Running post-exec hook'):
+    if hasattr(gen, "post_exec"):
+        with doing("Running post-exec hook"):
             gen.post_exec(args.origin, args.target)
 
 
