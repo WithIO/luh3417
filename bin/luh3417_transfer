@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+from luh3417.transfer.__main__ import doing, main
+from luh3417.utils import run_main
+
+if __name__ == "__main__":
+    run_main(main, doing)
