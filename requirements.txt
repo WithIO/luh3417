@@ -4,8 +4,11 @@
 #
 #    __main__.py compile requirements.in
 #
-click==7.0                # via pip-tools
+apache-libcloud==2.4.0
+certifi==2019.3.9         # via requests
+chardet==3.0.4            # via requests
 coloredlogs==10.0
 humanfriendly==4.17       # via coloredlogs
-pip-tools==3.5.0
-six==1.12.0               # via pip-tools
+idna==2.8                 # via requests
+requests==2.21.0          # via apache-libcloud
+urllib3==1.24.1           # via requests

@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Text
 
 from luh3417.luhfs import Location, parse_location
 from luh3417.luhsql import LuhSql, create_root_from_source
+from luh3417.record_set import Zone, RecordSet, parse_domain
 from luh3417.serialized_replace import ReplaceMap
 from luh3417.snapshot import copy_files
 from luh3417.utils import LuhError, escape
@@ -127,6 +128,31 @@ def run_post_install(post_install: List[Text], source: Location):
         source.run_script(script)
 
 
+def configure_dns(dns: Dict):
+    """
+    Configures the DNS zones by loading all the zones into RecordSet and then
+    calling RecordSet on all entries to configure them properly
+    """
+
+    zones = []
+
+    for zone in dns["providers"]:
+        zone['domain'] = parse_domain(zone['domain'])
+        zones.append(Zone(**zone))
+
+    rs = RecordSet(zones)
+
+    for entry in dns["entries"]:
+        if entry["type"] == "alias":
+            func = rs.set_alias
+        elif entry["type"] == "ips":
+            func = rs.set_ips
+        else:
+            raise LuhError(f'Unknown entry type {entry["type"]}')
+
+        func(**entry['params'])
+
+
 def patch_config(
     config: Dict, patch_location: Optional[Location], allow_in_place: bool = False
 ) -> Dict:
@@ -193,6 +219,7 @@ def patch_config(
         "mysql_root": None,
         "outer_files": [],
         "post_install": [],
+        "dns": {},
     }
 
     for k, v in config.items():

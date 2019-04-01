@@ -7,6 +7,7 @@ from luh3417.luhfs import Location, parse_location
 from luh3417.luhphp import set_wp_config_values
 from luh3417.luhsql import create_from_source, patch_sql_dump
 from luh3417.restore import (
+    configure_dns,
     ensure_db_exists,
     get_remote,
     get_wp_config,
@@ -125,6 +126,10 @@ def main(args: Optional[Sequence[str]] = None):
         if config["post_install"]:
             with doing("Running post install scripts"):
                 run_post_install(config["post_install"], remote)
+
+        if config["dns"]:
+            with doing("Configuring DNS"):
+                configure_dns(config["dns"])
 
 
 if __name__ == "__main__":

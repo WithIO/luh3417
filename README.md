@@ -313,6 +313,122 @@ complete. Typically, you can enable your virtual host and reload Apache.
 }
 ```
 
+##### `dns`
+
+You might want to use your DNS provider's API in order to configure the domain
+that is going to target your website. LUH3417 integrates with
+[libcloud](https://libcloud.readthedocs.io/en/latest/index.html) in order to
+provide an abstraction over the most popular cloud providers.
+
+Here is an example entry:
+
+```json
+{
+    "dns": {
+        "providers": [
+            {
+                "domain": "my-corp.net",
+                "provider": "digitalocean",
+                "credentials": {
+                    "key": "xxxxxx",
+                }
+            }
+        ],
+        "entries": [
+            {
+                "type": "alias",
+                "params": {
+                    "domain": "my-wp.my-corp.net",
+                    "target": "load-balancer.my-corp.net"
+                }
+            },
+            {
+                "type": "ips",
+                "params": {
+                    "domain": "dns.my-corp.net",
+                    "ips": [
+                        "2606:4700:4700::1111",
+                        "2606:4700:4700::1001",
+                        "1.1.1.1",
+                        "1.0.0.1"
+                    ]
+                }
+            }
+        ]
+    }
+}
+```
+
+Let's break this down
+
+###### `providers`
+
+That's a list of the providers, associated to a domain name. The different keys
+are used like this:
+
+- `domain` &mdash; root domain name managed by this provider
+- `provider` &mdash; domain name provider (you can get the list
+  [here](https://github.com/apache/libcloud/blob/trunk/libcloud/dns/types.py#L32),
+  use the lower-case string value)
+- `credentials` &mdash; kwargs to be passed to the constructor of the provider
+
+###### `entries`
+
+Entries are either a single CNAME either a set of A/AAAA records for a same
+domain name. LUH3417 will make sure that all records for this (sub-)domain
+match your specification and **will delete other records for that sub-domain**.
+
+Suppose the following situation:
+
+- `foo.my.org` resolves to `A 1.2.3.4`
+- But you want it to be a CNAME of `bar.my.org` 
+- The `A 1.2.3.4` entry will be deleted and a `CNAME bar.my.org` will be
+  created
+  
+Now, let's dig into the options
+
+**`"type" = "alias"`**
+
+That's when you want to create a CNAME.
+
+```json
+{
+    "type": "alias",
+    "params": {
+        "domain": "my-wp.my-corp.net",
+        "target": "load-balancer.my-corp.net"
+    }
+}
+```
+
+The two params are:
+
+- `domain` &mdash; target (sub-)domain
+- `target` &mdash; target of the CNAME (aka the value of the record)
+
+**`"type" = "ips"`**
+
+This will set your (sub-)domain to point on a set if IP addresses, preferably
+v6 but legacy systems like v4 are still supported.
+
+```json
+{
+    "type": "ips",
+    "params": {
+        "domain": "dns.my-corp.net",
+        "ips": [
+            "2606:4700:4700::1111",
+            "2606:4700:4700::1001",
+            "1.1.1.1",
+            "1.0.0.1"
+        ]
+    }
+}
+```
+
+- `domain` &mdash; is the target (sub-)domain
+- `ips` &mdash; is a list of IP address that will be set to AAAA and A records
+
 ### `transfer`
 
 The main goal of this package is to allow the setup of a custom workflow that

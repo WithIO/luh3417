@@ -11,7 +11,7 @@ def copy_files(remote: Location, local: Location, delete: bool = False):
 
     local.ensure_exists_as_dir()
 
-    args = ["rsync", "-rtv", "--exclude=.git"]
+    args = ["rsync", "-rtvz", "--exclude=.git", "--exclude=*.swp", "--exclude=*.un~"]
 
     if delete:
         args.append("--delete")
