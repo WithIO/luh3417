@@ -137,7 +137,7 @@ def configure_dns(dns: Dict):
     zones = []
 
     for zone in dns["providers"]:
-        zone['domain'] = parse_domain(zone['domain'])
+        zone["domain"] = parse_domain(zone["domain"])
         zones.append(Zone(**zone))
 
     rs = RecordSet(zones)
@@ -150,7 +150,7 @@ def configure_dns(dns: Dict):
         else:
             raise LuhError(f'Unknown entry type {entry["type"]}')
 
-        func(**entry['params'])
+        func(**entry["params"])
 
 
 def patch_config(
