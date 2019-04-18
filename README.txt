@@ -27,12 +27,23 @@ backup. For this reason, it is better to use ``transfer`` whenever
 possible. It will ensure your safety within the workflow that you
 defined.
 
+Installation
+------------
+
+::
+
+    pip install luh3417
+
 Usage
 -----
 
 LUH3417 is made to use with Python's ``-m`` option. This way, if you
 want to invoke the ``snapshot`` feature, the base command will be
 ``python -m luh3417.snapshot``.
+
+If you prefer, there is also equivalent commands installed in the
+``bin`` directory, namely ``luh3417_snapshot``, ``luh3417_restore`` and
+``luh3417_transfer``.
 
 All the locations can be in two formats:
 
