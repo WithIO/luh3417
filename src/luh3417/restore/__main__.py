@@ -39,6 +39,7 @@ def parse_args(args: Optional[Sequence[str]] = None) -> Namespace:
         "-a",
         "--allow-in-place",
         help="Allow to restore the backup in-place, overriding its origin",
+        action="store_true",
     )
 
     parser.add_argument(

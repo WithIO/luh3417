@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Text
 
 from luh3417.luhfs import Location, parse_location
 from luh3417.luhsql import LuhSql, create_root_from_source
-from luh3417.record_set import Zone, RecordSet, parse_domain
+from luh3417.record_set import RecordSet, Zone, parse_domain
 from luh3417.serialized_replace import ReplaceMap
 from luh3417.snapshot import copy_files
 from luh3417.utils import LuhError, escape
@@ -243,7 +243,7 @@ def patch_config(
 
             for k, v in patch.items():
                 base_config[k] = v
-    else:
+    elif not allow_in_place:
         raise LuhError(
             "If you do not set the --allow-in-place flag you must provide a "
             "patch which overrides the source location"
