@@ -68,7 +68,9 @@ def main(args: Optional[Sequence[str]] = None):
             snap.extract_archive_to_dir(d)
 
         with doing("Reading configuration"):
-            config = patch_config(read_config(join(d, "settings.json")), args.patch)
+            config = patch_config(
+                read_config(join(d, "settings.json")), args.patch, args.allow_in_place
+            )
 
         dump = join(d, "dump.sql")
 

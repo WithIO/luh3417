@@ -26,7 +26,7 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
     name="luh3417",
-    version="0.1.1",
+    version="0.1.2",
     packages=find_packages("src"),
     package_dir={"": "src"},
     scripts=["bin/luh3417_restore", "bin/luh3417_snapshot", "bin/luh3417_transfer"],
