@@ -75,7 +75,7 @@ class SshManager:
     _instances: Dict[Tuple, "SshManager"] = {}
 
     forward_agent = True
-    compress = True
+    compress = False
 
     def __init__(self, user: Text, host: Text, port: Text):
         """

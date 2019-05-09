@@ -6,7 +6,7 @@ from luh3417.luhfs import Location, parse_location
 from luh3417.luhsql import LuhSql, create_root_from_source
 from luh3417.record_set import RecordSet, Zone, parse_domain
 from luh3417.serialized_replace import ReplaceMap
-from luh3417.snapshot import copy_files
+from luh3417.snapshot import sync_files
 from luh3417.utils import LuhError, escape
 
 
@@ -52,7 +52,7 @@ def restore_files(wp_root: Text, remote: Location):
     """
 
     local = parse_location(wp_root)
-    copy_files(local, remote, delete=True)
+    sync_files(local, remote, delete=True)
 
 
 def restore_db(db: LuhSql, dump_path: Text):
