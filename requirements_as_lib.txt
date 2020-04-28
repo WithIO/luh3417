@@ -1,2 +1,0 @@
-coloredlogs>=9.0
-apache-libcloud>=2.0,<3.0

@@ -135,5 +135,9 @@ def main(args: Optional[Sequence[str]] = None):
                 configure_dns(config["dns"])
 
 
+def __main__():
+    return run_main(main, doing)
+
+
 if __name__ == "__main__":
-    run_main(main, doing)
+    __main__()
