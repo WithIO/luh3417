@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "luh3417"
+version = "0.1.3"
+description = "A WordPress backup/restore/workflow tool"
+authors = ["Rémy Sanchez <remy.sanchez@hyperthese.net>"]
+license = "WTFPL"
+
+[tool.poetry.dependencies]
+python = "^3.6"
+coloredlogs = ">=9.0"
+apache-libcloud = ">=2.0,<3.0"
+
+[tool.poetry.dev-dependencies]
+black = "^19.10b0"
+isort = "^4.3.21"
+
+[tool.poetry.scripts]
+luh3417_restore = 'luh3417.restore.__main__:__main__'
+luh3417_snapshot = 'luh3417.snapshot.__main__:__main__'
+luh3417_transfer = 'luh3417.transfer.__main__:__main__'
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

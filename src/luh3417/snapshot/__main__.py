@@ -118,5 +118,9 @@ def main(args: Optional[Sequence[str]] = None):
     return archive_location
 
 
+def __main__():
+    return run_main(main, doing)
+
+
 if __name__ == "__main__":
-    run_main(main, doing)
+    __main__()

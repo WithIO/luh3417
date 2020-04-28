@@ -15,7 +15,7 @@ PROD_DOMAIN = "www.my-website.com"
 DEV_DOMAIN = "my-org.com"
 
 PROJECT = "foo"
-WILDCARD_NAME = 'my-org'
+WILDCARD_NAME = "my-org"
 
 THEME_NAME = "jupiter-child"
 THEME_REPO = "git@gitlab.com:my-org/jupiter_child.git"
@@ -157,24 +157,18 @@ def get_patch(origin: Text, target: Text):
         }
     ]
 
-    if target != "prod":
-        outer_files.append({
-            "name": "robots.txt",
-            "content": "User-agent: *\nDisallow: /\n"
-        })
-
-    if target == 'local':
-        bash_prefix = 'sudo'
+    if target == "local":
+        bash_prefix = "sudo"
     else:
-        bash_prefix = ''
+        bash_prefix = ""
 
     post_install = [
         f"{bash_prefix} a2ensite {get_domain(target)}",
         f"{bash_prefix} systemctl reload apache2",
     ]
 
-    if target == 'local':
-        line = f'127.0.0.1 {get_domain(target)}'
+    if target == "local":
+        line = f"127.0.0.1 {get_domain(target)}"
 
         post_install += [
             f"grep -qxF {quote(line)} /etc/hosts || "
@@ -189,7 +183,14 @@ def get_patch(origin: Text, target: Text):
                 "repo": THEME_REPO,
                 "version": get_git_version(target),
             }
-        ] if target != 'prod' else [],
+        ]
+        if target != "prod"
+        else [],
+        "setup_queries": [
+            f"update wp_options "
+            f"set option_value = '{0 if target != 'prod' else 1}' "
+            f"where option_name = 'blog_public';"
+        ],
         "php_define": {"WP_SENTRY_ENV": sentry_env, "WP_CACHE": target != "local"},
         "mysql_root": mysql_root,
         "replace_in_dump": [
@@ -303,7 +304,7 @@ def make_virtual_host(environment: Text) -> Text:
             SSLCertificateFile /etc/apache2/ssl/{WILDCARD_NAME}.crt
             SSLCertificateKeyFile /etc/apache2/ssl/{WILDCARD_NAME}.key
             SSLCertificateChainFile /etc/apache2/ssl/{WILDCARD_NAME}.chain
-        
+
             SSLCipherSuite EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH
             SSLProtocol All -SSLv2 -SSLv3 -TLSv1 -TLSv1.1
             SSLHonorCipherOrder On
@@ -320,4 +321,3 @@ def make_virtual_host(environment: Text) -> Text:
             Redirect permanent / https://{get_domain(environment)}/
         </VirtualHost>
 """
-
