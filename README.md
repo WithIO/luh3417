@@ -9,15 +9,15 @@ main features:
   location
 - **Transfer** &mdash; Transfer one instance over another using automated
   backup, validation and configuration rules
-  
+
 Everything can happen seamlessly in *local* or *through SSH*, allowing you to
 work easily on remote servers from your local machine and to transfer instances
 from one server to another.
-  
+
 Thanks to this, putting your code to production is as simple as:
 
 ```bash
-python -m luh3417.transfer -g my_project.py local production 
+python -m luh3417.transfer -g my_project.py local production
 ```
 
 While the `snapshot` and `restore` operations can be used individually, it is
@@ -35,7 +35,7 @@ pip install luh3417
 ## Usage
 
 LUH3417 is made to use with Python's `-m` option. This way, if you want to
-invoke the `snapshot` feature, the base command will be 
+invoke the `snapshot` feature, the base command will be
 `python -m luh3417.snapshot`.
 
 If you prefer, there is also equivalent commands installed in the `bin`
@@ -84,7 +84,7 @@ Additional options:
   put whatever you want. `{base}` and `{time}` will be replaced respectively
   by the base name (see `--snapshot-base-name`) and the ISO 8601 UTC date.
   Independently of the name, the file will be placed in the `backup_dir`.
-  
+
 ### `restore`
 
 Restores a snapshot either in-place to its original location using the embedded
@@ -109,7 +109,7 @@ Options:
 - `-a`/`--allow-in-place` &mdash; Allows restoring the backup onto its original
   location. This flag is required because otherwise it would be way too easy
   to override
-  
+
 #### Restore in-place
 
 If you want to restore a backup to its original location, you just need to
@@ -119,7 +119,7 @@ know the file's location and pass the `-a` flag.
 python -m luh3417.restore -a root@backup-server.com:/path/to/snapshot.tar.gz
 ```
 
-> **NOTE** &mdash; If the snapshot was made locally, it will always be restored 
+> **NOTE** &mdash; If the snapshot was made locally, it will always be restored
 > locally because there is no way for LUH3417 to know the originating server so
 > it assumes that the snapshot file was not transferred to another machine.
 
@@ -262,7 +262,7 @@ correct even if quoted in a MySQL string.
 
 In order to create the database and set the user password, the script needs
 a root access to MySQL. Today, the only supported method is `socket`, because
-it is password-less. However it only works when the server is local and 
+it is password-less. However it only works when the server is local and
 properly configured (it's the default behavior in Debian-based distros).
 
 ```json
@@ -390,10 +390,10 @@ match your specification and **will delete other records for that sub-domain**.
 Suppose the following situation:
 
 - `foo.my.org` resolves to `A 1.2.3.4`
-- But you want it to be a CNAME of `bar.my.org` 
+- But you want it to be a CNAME of `bar.my.org`
 - The `A 1.2.3.4` entry will be deleted and a `CNAME bar.my.org` will be
   created
-  
+
 Now, let's dig into the options
 
 **`"type" = "alias"`**
@@ -448,7 +448,7 @@ The basic idea is the following:
 - You can specify an origin and target environment names
 - There is a *settings generator* Python file which will generate all the
   settings and patches appropriate for this transfer.
-  
+
 It's **your responsibility** to write an settings generator, however there is
 an a documented example attached in this repository.
 
@@ -469,6 +469,46 @@ To see the content of the generator file, please refer to the
 `allow_transfer()` method's documentation which will explain the spirit of
 the file.
 
+### `replace`
+
+Seeks and replaces serialized values. Values could be in quoted MySQL literals
+or serialized PHP values, they will be replaced and the containing string will
+be re-serialized.
+
+That's a complicated problem due to PHP serialized format which prefixes the
+string's length to the string. If you want to replace a value you need to
+replace its length.
+
+By example:
+
+```php
+echo serialize("foo");
+// s:3:"foo";
+
+echo serialize("long foo");
+// s:8:"long foo";
+//   ^-- see here how the prefix changed from 3 to 8
+```
+
+This command will do the replacing in a file and output to another file. Be
+careful, it will not warn you of overwrites.
+
+Usage:
+
+```
+python -m luh3417.replace [-h] -i INPUT -o OUTPUT [-b BEFORE [BEFORE ...]] [-a AFTER [AFTER ...]] [-c CHARSET]
+```
+
+Example:
+
+```
+python -m luh3417.replace \
+    -i dump.sql \
+    -o dump_replaced.sql \
+    -b old_domain.com \
+    -a new_domain.com
+```
+
 ## FAQ
 
 > Why the name `LUH3417`?
@@ -479,7 +519,7 @@ and especially setting up a professional workflow.
 
 > Why using Python to code it?
 
-It felt to the author that this language was more appropriate for this task 
+It felt to the author that this language was more appropriate for this task
 than PHP.
 
 > Do I need to write Python to use the transfer feature?
