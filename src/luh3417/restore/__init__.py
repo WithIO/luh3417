@@ -103,9 +103,9 @@ def ensure_db_exists(wp_config, mysql_root, source: Location):
 
     db.run_query(f"drop database if exists {name};")
     db.run_query(f"create database {name};")
-    db.run_query(
-        f"grant all privileges on {name}.* to {user}@{host} identified by {password};"
-    )
+    db.run_query(f"create user if not exists {user}@{host} identified by {password};")
+    db.run_query(f"alter user {user}@{host} identified by {password};")
+    db.run_query(f"grant all on {name}.* to {user}@{host};")
 
 
 def install_outer_files(outer_files: List[Dict], source: Location):
