@@ -31,10 +31,12 @@ def main(argv: Optional[Sequence[Text]] = None):
     args = parse_args(argv)
     setup_logging()
 
-    rep = [*zip(
-        (x.encode(args.charset) for x in args.before),
-        (x.encode(args.charset) for x in args.after),
-    )]
+    rep = [
+        *zip(
+            (x.encode(args.charset) for x in args.before),
+            (x.encode(args.charset) for x in args.after),
+        )
+    ]
 
     with open(args.input, "rb") as i, open(args.output, "wb") as o:
         for line in i:

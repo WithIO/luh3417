@@ -48,10 +48,12 @@ def copy_files(remote: Location, local: Location):
     """
     Copies files from the remote location to the local locations. Files are
     serialized and pipelined through tar, maybe locally, maybe through SSH
-    depending on the locations. 
+    depending on the locations.
     """
 
-    remote_args = _build_args(remote, ["tar", "-C", remote.path, "-c", "."])
+    remote_args = _build_args(
+        remote, ["tar", "--warning=no-file-changed", "-C", remote.path, "-c", "."]
+    )
     local_args_1 = _build_args(local, ["mkdir", "-p", local.path])
     local_args_2 = _build_args(local, ["tar", "-C", local.path, "-x"])
 
@@ -74,9 +76,12 @@ def copy_files(remote: Location, local: Location):
     local_p.wait()
 
     if remote_p.returncode:
-        raise LuhError(
-            f'Error while reading files from "{remote}": {remote_p.stderr.read(1000)}'
-        )
+        err = remote_p.stderr.read(1000)
+
+        if err == b"":
+            return
+
+        raise LuhError(f'Error while reading files from "{remote}": {err}')
 
     if local_p.returncode:
         raise LuhError(f'Error writing files to "{local}": {local_p.stderr.read(1000)}')
