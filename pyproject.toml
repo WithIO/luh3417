@@ -10,7 +10,7 @@ repository = "https://github.com/WithIO/luh3417"
 [tool.poetry.dependencies]
 python = "^3.6"
 coloredlogs = ">=9.0"
-apache-libcloud = ">=2.0,<3.0"
+apache-libcloud = "^3.0"
 
 [tool.poetry.dev-dependencies]
 black = "^19.10b0"
